@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tiny Planet Runner - Deluxe Edition</title>
+  <style>
+    :root {
+      --ink: #17223b;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --line: rgba(255, 255, 255, 0.6);
+      --accent: #ff5a7a;
+      --accent-2: #1ecab8;
+      --gold: #ffd166;
+      --shadow: rgba(22, 28, 54, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0f1226;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+    }
+
+    .game-shell {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      background: #0f1226;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    .hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 4;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: clamp(12px, 2.2vw, 22px);
+      pointer-events: none;
+    }
+
+    .score-box,
+    .hud-button {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 12px 34px var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .score-box {
+      min-width: 105px;
+      padding: 10px 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .score-box span {
+      display: block;
+      margin-bottom: 2px;
+      color: rgba(23, 34, 59, 0.65);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .score-box strong {
+      display: block;
+      font-size: clamp(22px, 3.2vw, 34px);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: #0f1226;
+    }
+
+    .hud-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      pointer-events: auto;
+    }
+
+    .hud-button,
+    .primary-button,
+    .secondary-button {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+    }
+
+    .hud-button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .hud-button:hover,
+    .primary-button:hover,
+    .secondary-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.2);
+    }
+
+    .hud-button:active,
+    .primary-button:active,
+    .secondary-button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 255ms cubic-bezier(0.4, 0, 0.2, 1), visibility 255ms ease;
+    }
+
+    .screen.is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .panel {
+      width: min(92vw, 460px);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel-strong);
+      box-shadow: 0 30px 90px rgba(11, 18, 42, 0.4);
+      padding: clamp(26px, 5vw, 42px);
+      text-align: center;
+      backdrop-filter: blur(24px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      font-weight: 900;
+    }
+
+    h1 {
+      font-size: clamp(46px, 9vw, 72px);
+      background: linear-gradient(135deg, #17223b, #ff5a7a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: clamp(38px, 8vw, 56px);
+      color: var(--ink);
+    }
+
+    .screen-copy {
+      max-width: 32ch;
+      margin: 18px auto 26px;
+      color: rgba(23, 34, 59, 0.75);
+      font-size: clamp(15px, 2.6vw, 18px);
+      line-height: 1.5;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .primary-button,
+    .secondary-button {
+      min-width: 150px;
+      min-height: 54px;
+      padding: 0 22px;
+      font-size: 16px;
+      box-shadow: 0 14px 28px var(--shadow);
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #ff5a7a, #ffb45e);
+      color: #fff;
+    }
+
+    .secondary-button {
+      border: 1px solid rgba(23, 34, 59, 0.15);
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0 26px;
+    }
+
+    .result-grid div {
+      border-radius: 12px;
+      background: rgba(30, 202, 184, 0.12);
+      padding: 14px 10px;
+      border: 1px solid rgba(30, 202, 184, 0.2);
+    }
+
+    .result-grid span {
+      display: block;
+      margin-bottom: 4px;
+      color: rgba(23, 34, 59, 0.6);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .result-grid strong {
+      display: block;
+      font-size: 32px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+
+    @media (max-width: 640px) {
+      .hud {
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .score-box {
+        min-width: 84px;
+        padding: 8px 10px;
+      }
+
+      .hud-button {
+        min-height: 40px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+
+      .hud-actions {
+        flex-direction: column;
+      }
+
+      .panel {
+        padding: 28px 20px;
+      }
+
+      .primary-button,
+      .secondary-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" aria-label="Tiny Planet Runner">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="hud" aria-live="polite">
+      <div class="score-box">
+        <span>Score</span>
+        <strong id="scoreText">0</strong>
+      </div>
+      <div class="score-box">
+        <span>Best</span>
+        <strong id="bestText">0</strong>
+      </div>
+      <div class="hud-actions">
+        <button class="hud-button" id="pauseButton" type="button" hidden>Pause</button>
+        <button class="hud-button" id="soundButton" type="button">Sound On</button>
+      </div>
+    </div>
+
+    <section class="screen is-visible" id="startScreen" aria-label="Start screen">
+      <div class="panel">
+        <p class="eyebrow">Orbit Arcade</p>
+        <h1>Tiny Planet Runner</h1>
+        <p class="screen-copy">Tap or Space to hop. Dynamic speed scaling triggers after 400 points! Can you survive?</p>
+        <div class="button-row">
+          <button class="primary-button" id="startButton" type="button">Start Run</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="pauseScreen" aria-label="Paused">
+      <div class="panel">
+        <p class="eyebrow">Paused</p>
+        <h2>Hold Orbit</h2>
+        <p class="screen-copy">Take a breath. The planet will wait.</p>
+        <div class="button-row">
+          <button class="primary-button" id="resumeButton" type="button">Resume</button>
+          <button class="secondary-button" id="restartFromPauseButton" type="button">Restart</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="gameOverScreen" aria-label="Game over">
+      <div class="panel">
+        <p class="eyebrow" id="gameOverReason">Run Ended</p>
+        <h2>Game Over</h2>
+        <div class="result-grid">
+          <div>
+            <span>Score</span>
+            <strong id="finalScoreText">0</strong>
+          </div>
+          <div>
+            <span>Best</span>
+            <strong id="finalBestText">0</strong>
+          </div>
+        </div>
+        <div class="button-row">
+          <button class="primary-button" id="restartButton" type="button">Play Again</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const TAU = Math.PI * 2;
+      const STORAGE_KEY = "tinyPlanetRunner.bestScore";
+      const SOUND_KEY = "tinyPlanetRunner.soundEnabled";
+
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+      const rand = (min, max) => min + Math.random() * (max - min);
+      const choose = (items) => items[Math.floor(Math.random() * items.length)];
+
+      function roundedRect(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      }
+
+      function seededNoise(index) {
+        return Math.abs(Math.sin(index * 12.9898 + 78.233) * 43758.5453) % 1;
+      }
+
+      class AudioKit {
+        constructor(button) {
+          this.button = button;
+          this.context = null;
+          this.enabled = localStorage.getItem(SOUND_KEY) !== "off";
+          this.refreshButton();
+
+          this.button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.enabled = !this.enabled;
+            localStorage.setItem(SOUND_KEY, this.enabled ? "on" : "off");
+            if (this.enabled) {
+              this.play("start");
+            }
+            this.refreshButton();
+          });
+        }
+
+        refreshButton() {
+          this.button.textContent = this.enabled ? "Sound On" : "Sound Off";
+        }
+
+        ensureContext() {
+          if (!this.enabled || this.context) {
+            return;
+          }
+
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) {
+            this.enabled = false;
+            this.refreshButton();
+            return;
+          }
+
+          this.context = new AudioContext();
+        }
+
+        play(type) {
+          if (!this.enabled) {
+            return;
+          }
+
+          this.ensureContext();
+          if (!this.context) {
+            return;
+          }
+
+          if (this.context.state === "suspended") {
+            this.context.resume();
+          }
+
+          const now = this.context.currentTime;
+          const sounds = {
+            jump: { frequency: 400, end: 680, duration: 0.12, volume: 0.07, wave: "triangle" },
+            land: { frequency: 180, end: 120, duration: 0.07, volume: 0.04, wave: "sine" },
+            pass: { frequency: 700, end: 1100, duration: 0.07, volume: 0.04, wave: "sine" },
+            crash: { frequency: 130, end: 35, duration: 0.35, volume: 0.14, wave: "sawtooth" },
+            start: { frequency: 280, end: 580, duration: 0.18, volume: 0.06, wave: "triangle" },
+            speedup: { frequency: 500, end: 900, duration: 0.25, volume: 0.08, wave: "sine" }
+          };
+
+          const sound = sounds[type] || sounds.jump;
+          const oscillator = this.context.createOscillator();
+          const gain = this.context.createGain();
+
+          oscillator.type = sound.wave;
+          oscillator.frequency.setValueAtTime(sound.frequency, now);
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, sound.end), now + sound.duration);
+
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(sound.volume, now + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + sound.duration);
+
+          oscillator.connect(gain);
+          gain.connect(this.context.destination);
+          oscillator.start(now);
+          oscillator.stop(now + sound.duration + 0.02);
+        }
+      }
+
+      class TinyPlanetRunner {
+        constructor(canvas, ui, audio) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.ui = ui;
+          this.audio = audio;
+
+          this.state = "start";
+          this.bestScore = Number(localStorage.getItem(STORAGE_KEY) || 0);
+          this.runnerAngle = -Math.PI / 2;
+          this.stars = this.createStars(160);
+          this.landBlobs = this.createLandBlobs();
+          this.nebulaDots = this.createNebulaDots(32);
+          this.lastFrameTime = performance.now();
+
+          this.handleResize();
+          this.resetWorld();
+          this.bindEvents();
+          this.updateUi();
+          requestAnimationFrame((time) => this.loop(time));
+        }
+
+        bindEvents() {
+          window.addEventListener("resize", () => this.handleResize());
+
+          this.canvas.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            this.primaryAction();
+          });
+
+          this.ui.startButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.startGame();
+          });
+
+          this.ui.restartButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.startGame();
+          });
+
+          this.ui.resumeButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.resumeGame();
+          });
+
+          this.ui.pauseButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.togglePause();
+          });
+
+          this.ui.restartFromPauseButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            this.startGame();
+          });
+
+          window.addEventListener("keydown", (event) => {
+            if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
+              event.preventDefault();
+              this.primaryAction();
+            }
+
+            if (event.code === "Enter" && this.state !== "playing") {
+              event.preventDefault();
+              this.primaryAction();
+            }
+
+            if (event.code === "Escape" || event.code === "KeyP") {
+              event.preventDefault();
+              this.togglePause();
+            }
+          });
+        }
+
+        createStars(count) {
+          return Array.from({ length: count }, () => ({
+            x: Math.random(),
+            y: Math.random(),
+            size: rand(0.6, 2.5),
+            twinkle: rand(0.6, 2.0),
+            phase: rand(0, TAU)
+          }));
+        }
+
+        createNebulaDots(count) {
+          return Array.from({ length: count }, () => ({
+            x: Math.random(),
+            y: Math.random(),
+            radius: rand(30, 110),
+            color: choose(["rgba(255, 209, 102, 0.15)", "rgba(255, 90, 122, 0.14)", "rgba(30, 202, 184, 0.15)", "rgba(124, 47, 255, 0.12)"])
+          }));
+        }
+
+        createLandBlobs() {
+          return Array.from({ length: 18 }, (_, index) => ({
+            angle: rand(0, TAU),
+            distance: rand(0.15, 0.75),
+            width: rand(0.10, 0.30),
+            height: rand(0.05, 0.15),
+            color: choose(["#7df08d", "#5bdd8b", "#b4f078", "#6ce1a5", "#4edba4"]),
+            index
+          }));
+        }
+
+        handleResize() {
+          const oldScale = this.scale || 1;
+          this.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+          this.width = window.innerWidth;
+          this.height = window.innerHeight;
+          this.canvas.width = Math.floor(this.width * this.dpr);
+          this.canvas.height = Math.floor(this.height * this.dpr);
+          this.canvas.style.width = `${this.width}px`;
+          this.canvas.style.height = `${this.height}px`;
+          this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+          const minSide = Math.min(this.width, this.height);
+          
+          // --- MAKES THE WORLD BIGGER ---
+          // Increased size metrics to expand the game arena significantly
+          this.planetRadius = clamp(minSide * 0.33, 140, 250);
+          if (this.height < 540) {
+            this.planetRadius = clamp(minSide * 0.28, 110, 190);
+          }
+
+          this.scale = clamp(this.planetRadius / 150, 0.75, 1.35);
+          this.center = {
+            x: this.width * 0.5,
+            y: this.height * (this.height > this.width ? 0.58 : 0.56)
+          };
+
+          this.playerWidth = 24 * this.scale;
+          this.playerHeight = 40 * this.scale;
+          this.gravity = 1350 * this.scale;
+          this.jumpVelocity = 465 * this.scale;
+
+          if (this.player) {
+            const ratio = this.scale / oldScale;
+            this.player.altitude *= ratio;
+            this.player.velocity *= ratio;
+          }
+        }
+
+        resetWorld() {
+          this.elapsed = 0;
+          this.distance = 0;
+          this.displaySpin = 0;
+          this.speed = 1.15; 
+          this.currentSpeedMultiplier = 1.0;
+          this.lastSpeedTier = 1.0;
+          this.speedUpFlashTimer = 0;
+          this.score = 0;
+          this.bonusScore = 0;
+          this.obstaclesPassed = 0;
+          this.spawnCursor = 1.6;
+          this.jumpBuffer = 0;
+          this.coyoteTimer = 0;
+          this.particles = [];
+          this.obstacles = [];
+          this.player = {
+            altitude: 0,
+            velocity: 0,
+            grounded: true,
+            runBob: 0,
+            squash: 0
+          };
+          this.generateAhead();
+        }
+
+        startGame() {
+          this.resetWorld();
+          this.state = "playing";
+          this.audio.play("start");
+          this.updateUi();
+        }
+
+        primaryAction() {
+          if (this.state === "start" || this.state === "over") {
+            this.startGame();
+            return;
+          }
+
+          if (this.state === "paused") {
+            this.resumeGame();
+            return;
+          }
+
+          this.jumpBuffer = 0.13;
+        }
+
+        togglePause() {
+          if (this.state === "playing") {
+            this.state = "paused";
+          } else if (this.state === "paused") {
+            this.resumeGame();
+          }
+          this.updateUi();
+        }
+
+        resumeGame() {
+          if (this.state === "paused") {
+            this.state = "playing";
+            this.lastFrameTime = performance.now();
+            this.updateUi();
+          }
+        }
+
+        endRun(reason) {
+          if (this.state !== "playing") {
+            return;
+          }
+
+          this.state = "over";
+          this.bestScore = Math.max(this.bestScore, this.score);
+          localStorage.setItem(STORAGE_KEY, String(this.bestScore));
+          this.spawnBurst(this.getPlayerFootPoint(), "#ff5a7a", 24, 200);
+          this.audio.play("crash");
+          this.updateUi(reason);
+        }
+
+        updateUi(reason = "") {
+          this.ui.scoreText.textContent = String(this.score);
+          this.ui.bestText.textContent = String(this.bestScore);
+          this.ui.pauseButton.hidden = this.state === "start" || this.state === "over";
+          this.ui.pauseButton.textContent = this.state === "paused" ? "Resume" : "Pause";
+
+          this.ui.startScreen.classList.toggle("is-visible", this.state === "start");
+          this.ui.pauseScreen.classList.toggle("is-visible", this.state === "paused");
+          this.ui.gameOverScreen.classList.toggle("is-visible", this.state === "over");
+
+          if (this.state === "over") {
+            this.ui.finalScoreText.textContent = String(this.score);
+            this.ui.finalBestText.textContent = String(this.bestScore);
+            this.ui.gameOverReason.textContent = reason || "Run Ended";
+          }
+        }
+
+        loop(time) {
+          const dt = Math.min(0.045, Math.max(0, (time - this.lastFrameTime) / 1000));
+          this.lastFrameTime = time;
+
+          if (this.state === "playing") {
+            this.update(dt);
+          } else {
+            this.updateIdle(dt);
+          }
+
+          this.updateParticles(dt);
+          this.render(time / 1000);
+          requestAnimationFrame((nextTime) => this.loop(nextTime));
+        }
+
+        updateIdle(dt) {
+          this.displaySpin += dt * 0.08;
+          if (this.state !== "over") {
+            this.distance = this.displaySpin;
+          }
+        }
+
+        update(dt) {
+          this.elapsed += dt;
+          
+          // --- SCORE CALCULATOR ---
+          this.score = Math.floor(this.distance * 20 + this.bonusScore + this.elapsed * 3);
+
+          // --- PROGRESSIVE STEP SPEED SCALING SYSTEM ---
+          // Custom speed milestones matching rules requested exactly
+          let multiplier = 1.0;
+          if (this.score > 400) {
+            multiplier = 1.0 + Math.floor((this.score - 200) / 200) * 0.2;
+          }
+          this.currentSpeedMultiplier = multiplier;
+
+          // Detect speed milestones to flash high-juice visual effects
+          if (this.currentSpeedMultiplier > this.lastSpeedTier) {
+            this.speedUpFlashTimer = 2.0; 
+            this.audio.play("speedup");
+            this.lastSpeedTier = this.currentSpeedMultiplier;
+          }
+
+          if (this.speedUpFlashTimer > 0) {
+            this.speedUpFlashTimer -= dt;
+          }
+
+          // Balanced base speed multiplied cleanly by dynamic system scaling
+          this.speed = 1.15 * this.currentSpeedMultiplier;
+          this.distance += this.speed * dt;
+          this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
+
+          this.generateAhead();
+          this.updatePlayerPhysics(dt);
+          this.updateObstacleProgress();
+          this.cleanupObstacles();
+
+          this.ui.scoreText.textContent = String(this.score);
+          if (this.score > this.bestScore) {
+            this.ui.bestText.textContent = String(this.score);
+          }
+        }
+
+        updatePlayerPhysics(dt) {
+          const player = this.player;
+          const surfaceHere = this.hasSurfaceAt(this.distance);
+
+          if (player.grounded && !surfaceHere) {
+            player.grounded = false;
+            player.velocity = Math.min(player.velocity, -60 * this.scale);
+          }
+
+          if (player.grounded) {
+            this.coyoteTimer = 0.09;
+
+            // --- VISUAL JUICE: RUNNING SPARKS ---
+            // Continuously shoots tiny engine dust trails back under the feet while running
+            if (Math.random() < 0.18) {
+              const foot = this.getPlayerFootPoint();
+              this.particles.push({
+                x: foot.x,
+                y: foot.y,
+                vx: -Math.cos(this.runnerAngle) * 15 - Math.sin(this.runnerAngle) * (this.speed * 40),
+                vy: -Math.sin(this.runnerAngle) * 15 + Math.cos(this.runnerAngle) * (this.speed * 40),
+                life: rand(0.15, 0.35),
+                maxLife: 0.35,
+                size: rand(1.2, 3.2) * this.scale,
+                color: choose(["rgba(255, 255, 255, 0.45)", "rgba(30, 202, 184, 0.35)"])
+              });
+            }
+          } else {
+            this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
+          }
+
+          if (this.jumpBuffer > 0 && (player.grounded || this.coyoteTimer > 0)) {
+            player.velocity = this.jumpVelocity;
+            player.grounded = false;
+            player.squash = 1;
+            this.coyoteTimer = 0;
+            this.jumpBuffer = 0;
+            this.spawnJumpPuff();
+            this.audio.play("jump");
+          }
+
+          if (!player.grounded || player.altitude > 0 || !surfaceHere) {
+            player.velocity -= this.gravity * dt;
+            player.altitude += player.velocity * dt;
+
+            if (surfaceHere && player.altitude <= 0 && player.velocity <= 0) {
+              player.altitude = 0;
+              player.velocity = 0;
+              if (!player.grounded) {
+                this.audio.play("land");
+                this.spawnLandDust();
+              }
+              player.grounded = true;
+            }
+          }
+
+          if (player.grounded && surfaceHere) {
+            player.altitude = 0;
+            player.velocity = 0;
+          }
+
+          player.runBob += dt * this.speed * 4.5;
+          player.squash = Math.max(0, player.squash - dt * 7.5);
+
+          if (player.altitude < -this.planetRadius * 0.42) {
+            this.endRun("Lost Orbit");
+            return;
+          }
+
+          this.checkObstacleCollisions();
+        }
+
+        updateObstacleProgress() {
+          for (const obstacle of this.obstacles) {
+            if (obstacle.passed) {
+              continue;
+            }
+
+            const end = obstacle.type === "gap"
+              ? obstacle.s + obstacle.length
+              : obstacle.s + obstacle.widthAngle * 0.5;
+
+            if (end < this.distance - 0.08) {
+              obstacle.passed = true;
+              this.obstaclesPassed += 1;
+              this.bonusScore += obstacle.type === "gap" ? 40 : 25;
+
+              if (this.obstaclesPassed % 2 === 0) {
+                this.audio.play("pass");
+              }
+            }
+          }
+        }
+
+        cleanupObstacles() {
+          const floor = this.distance - TAU * 1.4;
+          this.obstacles = this.obstacles.filter((obstacle) => {
+            const end = obstacle.type === "gap" ? obstacle.s + obstacle.length : obstacle.s;
+            return end > floor;
+          });
+        }
+
+        generateAhead() {
+          const lookAhead = TAU * 2.5;
+
+          while (this.spawnCursor < this.distance + lookAhead) {
+            // --- BEGINNER FRIENDLY PROGRESSION TUNING ---
+            // Difficulty relies cleanly on how many points the runner successfully holds
+            const difficulty = clamp(this.score / 1500, 0, 1.8);
+            
+            // Substantially increased base spacing gap layout early on so it feels approachable
+            const spacing = clamp(rand(1.7, 2.5) - difficulty * 0.4, 0.95, 2.5);
+            this.spawnCursor += spacing;
+
+            const roll = Math.random();
+            const gapChance = clamp(0.18 + difficulty * 0.045, 0.18, 0.30);
+            const spikeChance = clamp(0.25 + difficulty * 0.035, 0.25, 0.36);
+
+            if (roll < gapChance) {
+              // Shorter, manageable gap length bounds initially
+              const length = clamp(rand(0.14, 0.22) + difficulty * 0.05, 0.14, 0.36);
+              this.obstacles.push({
+                type: "gap",
+                s: this.spawnCursor,
+                length,
+                passed: false
+              });
+              this.spawnCursor += length * rand(0.75, 1.05);
+              continue;
+            }
+
+            if (roll < gapChance + spikeChance) {
+              this.obstacles.push({
+                type: "spike",
+                s: this.spawnCursor,
+                widthAngle: rand(0.11, 0.15) + difficulty * 0.01,
+                height: rand(26, 36),
+                passed: false
+              });
+            } else if (roll < gapChance + spikeChance + 0.25) {
+              this.obstacles.push({
+                type: "rock",
+                s: this.spawnCursor,
+                widthAngle: rand(0.12, 0.17),
+                height: rand(22, 32),
+                passed: false
+              });
+            } else {
+              this.obstacles.push({
+                type: "hazard",
+                s: this.spawnCursor,
+                widthAngle: rand(0.10, 0.15),
+                height: rand(18, 25),
+                passed: false
+              });
+            }
+
+            // Strict protection barrier against hard double obstacles spawning for fresh beginners
+            if (this.score > 300 && difficulty > 0.6 && Math.random() < 0.2) {
+              this.obstacles.push({
+                type: choose(["hazard", "spike"]),
+                s: this.spawnCursor + rand(0.35, 0.45),
+                widthAngle: rand(0.09, 0.13),
+                height: rand(18, 28),
+                passed: false
+              });
+            }
+          }
+        }
+
+        hasSurfaceAt(distance) {
+          return !this.obstacles.some((obstacle) => {
+            if (obstacle.type !== "gap") {
+              return false;
+            }
+
+            return distance >= obstacle.s && distance <= obstacle.s + obstacle.length;
+          });
+        }
+
+        checkObstacleCollisions() {
+          const player = this.player;
+          const playerHalfWidthAngle = (this.playerWidth * 0.32) / this.planetRadius;
+          const playerFoot = player.altitude;
+          const playerHead = player.altitude + this.playerHeight * 0.88;
+
+          for (const obstacle of this.obstacles) {
+            if (obstacle.type === "gap") {
+              continue;
+            }
+
+            const delta = obstacle.s - this.distance;
+            if (Math.abs(delta) > obstacle.widthAngle * 0.5 + playerHalfWidthAngle) {
+              continue;
+            }
+
+            const obstacleHeight = obstacle.height * this.scale;
+            const overlapY = playerFoot < obstacleHeight && playerHead > 2 * this.scale;
+
+            if (overlapY) {
+              this.endRun(obstacle.type === "spike" ? "Ouch, Spikes" : "Planet Bump");
+              return;
+            }
+          }
+        }
+
+        getPlayerFootPoint() {
+          const radius = this.planetRadius + this.player.altitude;
+          return {
+            x: this.center.x + Math.cos(this.runnerAngle) * radius,
+            y: this.center.y + Math.sin(this.runnerAngle) * radius
+          };
+        }
+
+        spawnJumpPuff() {
+          const point = this.getPlayerFootPoint();
+          this.spawnBurst(point, "#ffffff", 10, 90, 0.35);
+        }
+
+        spawnLandDust() {
+          const point = this.getPlayerFootPoint();
+          this.spawnBurst(point, "#ffd166", 8, 60, 0.25);
+        }
+
+        spawnBurst(point, color, count, power, life = 0.55) {
+          for (let i = 0; i < count; i += 1) {
+            const angle = rand(0, TAU);
+            const speed = rand(power * 0.25, power);
+            this.particles.push({
+              x: point.x,
+              y: point.y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life: rand(life * 0.55, life),
+              maxLife: life,
+              size: rand(2, 5) * this.scale,
+              color
+            });
+          }
+        }
+
+        updateParticles(dt) {
+          for (const particle of this.particles) {
+            particle.life -= dt;
+            particle.x += particle.vx * dt;
+            particle.y += particle.vy * dt;
+            particle.vy += 70 * dt;
+            particle.vx *= 0.985;
+            particle.vy *= 0.985;
+          }
+
+          this.particles = this.particles.filter((particle) => particle.life > 0);
+        }
+
+        render(time) {
+          this.drawBackground(time);
+          this.drawPlanet(time);
+          this.drawParticles();
+          this.drawObstacles(time);
+          this.drawPlayer(time);
+          this.drawVignette();
+          this.drawSpeedAlerts(); 
+        }
+
+        drawBackground(time) {
+          const ctx = this.ctx;
+          const sky = ctx.createLinearGradient(0, 0, 0, this.height);
+          
+          // Sky dynamic shifting - gets more neon-electric as multiplier ramps up
+          if (this.currentSpeedMultiplier > 1.4) {
+            sky.addColorStop(0, "#bc66ff");
+            sky.addColorStop(0.42, "#4f52ff");
+          } else if (this.currentSpeedMultiplier > 1.0) {
+            sky.addColorStop(0, "#83f3ff");
+            sky.addColorStop(0.42, "#6066ff");
+          } else {
+            sky.addColorStop(0, "#7ee7ff");
+            sky.addColorStop(0.42, "#7c8cff");
+          }
+          sky.addColorStop(0.74, "#211f52");
+          sky.addColorStop(1, "#0f1226");
+          ctx.fillStyle = sky;
+          ctx.fillRect(0, 0, this.width, this.height);
+
+          for (const dot of this.nebulaDots) {
+            const x = dot.x * this.width + Math.sin(time * 0.1 + dot.radius) * 8;
+            const y = dot.y * this.height;
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, dot.radius);
+            gradient.addColorStop(0, dot.color);
+            gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, dot.radius, 0, TAU);
+            ctx.fill();
+          }
+
+          this.drawDistantPlanet(time);
+
+          for (const star of this.stars) {
+            const x = (star.x * this.width + this.distance * 12 * star.twinkle) % (this.width + 20) - 10;
+            const y = star.y * this.height;
+            const alpha = 0.35 + Math.sin(time * star.twinkle + star.phase) * 0.25;
+            ctx.globalAlpha = clamp(alpha, 0.15, 0.75);
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(x, y, star.size, 0, TAU);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        drawDistantPlanet(time) {
+          const ctx = this.ctx;
+          const x = this.width * 0.16 + Math.sin(time * 0.08) * 10;
+          const y = this.height * 0.18;
+          const radius = clamp(Math.min(this.width, this.height) * 0.045, 24, 52);
+
+          ctx.save();
+          ctx.globalAlpha = 0.88;
+          ctx.translate(x, y);
+          ctx.rotate(-0.28);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.38)";
+          ctx.lineWidth = Math.max(2, radius * 0.09);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, radius * 1.7, radius * 0.38, 0, 0, TAU);
+          ctx.stroke();
+
+          const gradient = ctx.createRadialGradient(-radius * 0.4, -radius * 0.5, radius * 0.1, 0, 0, radius);
+          gradient.addColorStop(0, "#fff0a6");
+          gradient.addColorStop(0.6, "#ff9f6e");
+          gradient.addColorStop(1, "#e45668");
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        drawPlanet(time) {
+          const ctx = this.ctx;
+          const { x, y } = this.center;
+          const radius = this.planetRadius;
+
+          const glow = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.7);
+          glow.addColorStop(0, "rgba(255, 255, 255, 0.25)");
+          glow.addColorStop(0.55, "rgba(30, 202, 184, 0.14)");
+          glow.addColorStop(1, "rgba(255, 255, 255, 0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(x, y, radius * 1.7, 0, TAU);
+          ctx.fill();
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.26)";
+          ctx.shadowBlur = 35 * this.scale;
+          ctx.shadowOffsetY = 20 * this.scale;
+          const planet = ctx.createRadialGradient(x - radius * 0.36, y - radius * 0.45, radius * 0.15, x, y, radius * 1.06);
+          planet.addColorStop(0, "#d3fff2");
+          planet.addColorStop(0.22, "#8af0d0");
+          planet.addColorStop(0.62, "#32b7d0");
+          planet.addColorStop(1, "#1f5694");
+          ctx.fillStyle = planet;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+
+          this.drawLandMasses();
+          this.drawSurfaceRing(time);
+          this.drawSurfaceDetails(time);
+
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.36)";
+          ctx.lineWidth = 2 * this.scale;
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 16 * this.scale, 0, TAU);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        drawLandMasses() {
+          const ctx = this.ctx;
+          const { x, y } = this.center;
+          const radius = this.planetRadius;
+          const spin = this.distance % TAU;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, radius - 1, 0, TAU);
+          ctx.clip();
+
+          for (const blob of this.landBlobs) {
+            const angle = this.runnerAngle + blob.angle - spin;
+            const bx = x + Math.cos(angle) * radius * blob.distance;
+            const by = y + Math.sin(angle) * radius * blob.distance;
+            ctx.save();
+            ctx.translate(bx, by);
+            ctx.rotate(angle + Math.PI / 2 + Math.sin(blob.index) * 0.45);
+            ctx.globalAlpha = 0.85;
+            ctx.fillStyle = blob.color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radius * blob.width, radius * blob.height, 0, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+
+        drawSurfaceRing(time) {
+          const ctx = this.ctx;
+          const { x, y } = this.center;
+          const radius = this.planetRadius;
+          const crust = 18 * this.scale;
+
+          ctx.save();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          ctx.strokeStyle = "#215d46";
+          ctx.lineWidth = crust;
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 2 * this.scale, 0, TAU);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#8cf06a";
+          ctx.lineWidth = 9 * this.scale;
+          ctx.beginPath();
+          ctx.arc(x, y, radius - 3 * this.scale, 0, TAU);
+          ctx.stroke();
+
+          const gaps = this.obstacles.filter((obstacle) => obstacle.type === "gap");
+          for (const gap of gaps) {
+            const start = this.runnerAngle + (gap.s - this.distance);
+            const end = this.runnerAngle + (gap.s + gap.length - this.distance);
+
+            if (end < -Math.PI * 1.7 || start > Math.PI * 1.1) {
+              continue;
+            }
+
+            ctx.strokeStyle = "#0d1021";
+            ctx.lineWidth = crust * 1.35;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, start, end, false);
+            ctx.stroke();
+
+            ctx.strokeStyle = "rgba(255, 90, 122, 0.4)";
+            ctx.lineWidth = 2.5 * this.scale;
+            ctx.beginPath();
+            ctx.arc(x, y, radius - crust * 0.58, start, end, false);
+            ctx.stroke();
+
+            this.drawGapEdge(start);
+            this.drawGapEdge(end);
+          }
+
+          ctx.restore();
+        }
+
+        drawGapEdge(angle) {
+          const ctx = this.ctx;
+          const radius = this.planetRadius;
+          const point = {
+            x: this.center.x + Math.cos(angle) * radius,
+            y: this.center.y + Math.sin(angle) * radius
+          };
+
+          ctx.save();
+          ctx.translate(point.x, point.y);
+          ctx.rotate(angle + Math.PI / 2);
+          ctx.fillStyle = "#164238";
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+          ctx.lineWidth = 1.5 * this.scale;
+          roundedRect(ctx, -6 * this.scale, -11 * this.scale, 12 * this.scale, 20 * this.scale, 4 * this.scale);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        drawSurfaceDetails(time) {
+          const ctx = this.ctx;
+          const step = 0.18;
+          const startIndex = Math.floor((this.distance - Math.PI) / step);
+          const count = Math.ceil(TAU / step) + 6;
+
+          for (let i = startIndex; i < startIndex + count; i += 1) {
+            const s = i * step;
+
+            if (!this.hasSurfaceAt(s) || this.isNearObstacle(s, 0.08)) {
+              continue;
+            }
+
+            const seed = seededNoise(i);
+            if (seed < 0.18) {
+              continue;
+            }
+
+            const angle = this.runnerAngle + (s - this.distance);
+            const radius = this.planetRadius + 6 * this.scale;
+            const x = this.center.x + Math.cos(angle) * radius;
+            const y = this.center.y + Math.sin(angle) * radius;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle + Math.PI / 2);
+
+            if (seed < 0.55) {
+              ctx.strokeStyle = seed < 0.38 ? "#d9ff79" : "#56f2c6";
+              ctx.lineWidth = 2 * this.scale;
+              ctx.beginPath();
+              ctx.moveTo(0, 1 * this.scale);
+              ctx.lineTo(-3 * this.scale, -8 * this.scale);
+              ctx.moveTo(0, 1 * this.scale);
+              ctx.lineTo(3 * this.scale, -7 * this.scale);
+              ctx.stroke();
+            } else if (seed < 0.82) {
+              ctx.fillStyle = "#ffd166";
+              ctx.beginPath();
+              ctx.arc(0, -5 * this.scale, 2.2 * this.scale, 0, TAU);
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = "rgba(255, 255, 255, 0.52)";
+              ctx.lineWidth = 1.5 * this.scale;
+              ctx.beginPath();
+              ctx.arc(0, -2 * this.scale, 4 * this.scale, 0, TAU);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+          }
+        }
+
+        isNearObstacle(s, padding) {
+          return this.obstacles.some((obstacle) => {
+            if (obstacle.type === "gap") {
+              return s >= obstacle.s - padding && s <= obstacle.s + obstacle.length + padding;
+            }
+
+            return Math.abs(obstacle.s - s) <= obstacle.widthAngle * 0.7 + padding;
+          });
+        }
+
+        drawObstacles(time) {
+          const visible = this.obstacles
+            .filter((obstacle) => obstacle.type !== "gap")
+            .map((obstacle) => ({ obstacle, delta: obstacle.s - this.distance }))
+            .filter(({ delta }) => delta > -Math.PI && delta < Math.PI)
+            .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+          for (const item of visible) {
+            const angle = this.runnerAngle + item.delta;
+            const obstacle = item.obstacle;
+            const radius = this.planetRadius + 3 * this.scale;
+            const x = this.center.x + Math.cos(angle) * radius;
+            const y = this.center.y + Math.sin(angle) * radius;
+
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.rotate(angle + Math.PI / 2);
+
+            if (obstacle.type === "rock") {
+              this.drawRock(obstacle, time);
+            } else if (obstacle.type === "spike") {
+              this.drawSpike(obstacle);
+            } else {
+              this.drawHazard(obstacle, time);
+            }
+
+            this.ctx.restore();
+          }
+        }
+
+        drawRock(obstacle, time) {
+          const ctx = this.ctx;
+          const width = Math.max(18 * this.scale, obstacle.widthAngle * this.planetRadius);
+          const height = obstacle.height * this.scale;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.22)";
+          ctx.shadowBlur = 10 * this.scale;
+          ctx.shadowOffsetY = 5 * this.scale;
+
+          const gradient = ctx.createLinearGradient(-width / 2, -height, width / 2, 0);
+          gradient.addColorStop(0, "#ffe2a8");
+          gradient.addColorStop(0.48, "#df8a67");
+          gradient.addColorStop(1, "#8b4b61");
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.ellipse(0, -height * 0.48, width * 0.52, height * 0.48, Math.sin(time + obstacle.s) * 0.05, 0, TAU);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
+          ctx.beginPath();
+          ctx.arc(-width * 0.18, -height * 0.68, width * 0.11, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        drawSpike(obstacle) {
+          const ctx = this.ctx;
+          const width = Math.max(20 * this.scale, obstacle.widthAngle * this.planetRadius);
+          const height = obstacle.height * this.scale;
+
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+          ctx.shadowBlur = 8 * this.scale;
+          ctx.shadowOffsetY = 5 * this.scale;
+
+          const spikeCount = width > 26 * this.scale ? 3 : 2;
+          for (let i = 0; i < spikeCount; i += 1) {
+            const t = spikeCount === 1 ? 0.5 : i / (spikeCount - 1);
+            const cx = -width * 0.36 + t * width * 0.72;
+            const localWidth = width * 0.34;
+            const localHeight = height * (0.9 + seededNoise(Math.floor(obstacle.s * 1000) + i) * 0.14);
+            const gradient = ctx.createLinearGradient(cx, -localHeight, cx, 2);
+            gradient.addColorStop(0, "#ffffff");
+            gradient.addColorStop(0.42, "#9df1ff");
+            gradient.addColorStop(1, "#5353c9");
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(cx - localWidth * 0.5, 1 * this.scale);
+            ctx.lineTo(cx, -localHeight);
+            ctx.lineTo(cx + localWidth * 0.5, 1 * this.scale);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 1.2 * this.scale;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        drawHazard(obstacle, time) {
+          const ctx = this.ctx;
+          const height = obstacle.height * this.scale;
+          const width = Math.max(17 * this.scale, obstacle.widthAngle * this.planetRadius);
+          const pulse = 0.88 + Math.sin(time * 7 + obstacle.s * 3) * 0.12;
+
+          ctx.save();
+          ctx.globalAlpha = 0.38;
+          ctx.fillStyle = "#ff5a7a";
+          ctx.beginPath();
+          ctx.ellipse(0, -height * 0.25, width * 0.68 * pulse, height * 0.55 * pulse, 0, 0, TAU);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+
+          const gradient = ctx.createLinearGradient(0, -height, 0, 0);
+          gradient.addColorStop(0, "#fff4a3");
+          gradient.addColorStop(0.45, "#ff5a7a");
+          gradient.addColorStop(1, "#7c2fff");
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.moveTo(0, -height);
+          ctx.lineTo(width * 0.42, -height * 0.42);
+          ctx.lineTo(width * 0.22, 0);
+          ctx.lineTo(-width * 0.28, 0);
+          ctx.lineTo(-width * 0.44, -height * 0.42);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1.4 * this.scale;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        drawPlayer(time) {
+          const ctx = this.ctx;
+          const player = this.player;
+          const surfaceRadius = this.planetRadius;
+          const footRadius = surfaceRadius + player.altitude + 5 * this.scale;
+          const surfaceX = this.center.x + Math.cos(this.runnerAngle) * (surfaceRadius + 8 * this.scale);
+          const surfaceY = this.center.y + Math.sin(this.runnerAngle) * (surfaceRadius + 8 * this.scale);
+          const footX = this.center.x + Math.cos(this.runnerAngle) * footRadius;
+          const footY = this.center.y + Math.sin(this.runnerAngle) * footRadius;
+          const altitudeAlpha = clamp(1 - player.altitude / (this.planetRadius * 0.72), 0.12, 0.42);
+
+          ctx.save();
+          ctx.translate(surfaceX, surfaceY);
+          ctx.rotate(this.runnerAngle + Math.PI / 2);
+          ctx.globalAlpha = altitudeAlpha;
+          ctx.fillStyle = "rgba(12, 14, 38, 0.55)";
+          ctx.beginPath();
+          ctx.ellipse(0, 6 * this.scale, (14 + player.altitude * 0.06) * this.scale, 4.5 * this.scale, 0, 0, TAU);
+          ctx.fill();
+          ctx.restore();
+
+          ctx.save();
+          ctx.translate(footX, footY);
+          ctx.rotate(this.runnerAngle + Math.PI / 2);
+
+          const stride = player.grounded ? Math.sin(player.runBob * 4) : 0.18;
+          const squash = 1 - player.squash * 0.08;
+          const stretch = 1 + player.squash * 0.1;
+          ctx.scale(stretch, squash);
+          this.drawRunnerBody(stride, time);
+          ctx.restore();
+        }
+
+        drawRunnerBody(stride, time) {
+          const ctx = this.ctx;
+          const scale = this.scale;
+          const width = this.playerWidth;
+          const height = this.playerHeight;
+
+          ctx.save();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          ctx.strokeStyle = "#273451";
+          ctx.lineWidth = 4 * scale;
+          ctx.beginPath();
+          ctx.moveTo(-width * 0.2, -height * 0.18);
+          ctx.lineTo(-width * 0.36 - stride * 4 * scale, 0);
+          ctx.moveTo(width * 0.18, -height * 0.17);
+          ctx.lineTo(width * 0.34 + stride * 4 * scale, 0);
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2.2 * scale;
+          ctx.beginPath();
+          ctx.moveTo(-width * 0.2, -height * 0.18);
+          ctx.lineTo(-width * 0.36 - stride * 4 * scale, 0);
+          ctx.moveTo(width * 0.18, -height * 0.17);
+          ctx.lineTo(width * 0.34 + stride * 4 * scale, 0);
+          ctx.stroke();
+
+          const bodyGradient = ctx.createLinearGradient(0, -height, 0, 0);
+          bodyGradient.addColorStop(0, "#ffffff");
+          bodyGradient.addColorStop(0.56, "#d8fbff");
+          bodyGradient.addColorStop(1, "#8bdbff");
+          ctx.fillStyle = bodyGradient;
+          ctx.strokeStyle = "#273451";
+          ctx.lineWidth = 2.2 * scale;
+          roundedRect(ctx, -width * 0.5, -height * 0.78, width, height * 0.55, 9 * scale);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#ff5a7a";
+          roundedRect(ctx, -width * 0.2, -height * 0.56, width * 0.4, height * 0.12, 4 * scale);
+          ctx.fill();
+
+          ctx.strokeStyle = "#273451";
+          ctx.lineWidth = 3.4 * scale;
+          ctx.beginPath();
+          ctx.moveTo(-width * 0.44, -height * 0.55);
+          ctx.lineTo(-width * 0.72, -height * (0.42 + stride * 0.02));
+          ctx.moveTo(width * 0.44, -height * 0.55);
+          ctx.lineTo(width * 0.72, -height * (0.46 - stride * 0.02));
+          ctx.stroke();
+
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.8 * scale;
+          ctx.beginPath();
+          ctx.moveTo(-width * 0.44, -height * 0.55);
+          ctx.lineTo(-width * 0.72, -height * (0.42 + stride * 0.02));
+          ctx.moveTo(width * 0.44, -height * 0.55);
+          ctx.lineTo(width * 0.72, -height * (0.46 - stride * 0.02));
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.strokeStyle = "#273451";
+          ctx.lineWidth = 2.3 * scale;
+          ctx.beginPath();
+          ctx.arc(0, -height * 0.92, width * 0.48, 0, TAU);
+          ctx.fill();
+          ctx.stroke();
+
+          const visorGradient = ctx.createLinearGradient(-width * 0.36, -height, width * 0.33, -height * 0.78);
+          visorGradient.addColorStop(0, "#20375f");
+          visorGradient.addColorStop(0.52, "#375d9e");
+          visorGradient.addColorStop(1, "#7ef0ff");
+          ctx.fillStyle = visorGradient;
+          roundedRect(ctx, -width * 0.35, -height * 1.02, width * 0.7, height * 0.24, 8 * scale);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+          ctx.beginPath();
+          ctx.arc(width * 0.16 + Math.sin(time * 4) * 0.5, -height * 0.95, 2 * scale, 0, TAU);
+          ctx.fill();
+
+          ctx.restore();
+        }
+
+        drawParticles() {
+          const ctx = this.ctx;
+
+          for (const particle of this.particles) {
+            const alpha = clamp(particle.life / particle.maxLife, 0, 1);
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = particle.color;
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size * alpha, 0, TAU);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // --- VISUAL JUICE: ARCADE SPEED ALERTS ---
+        // Renders an exciting pop-up title notifying you when a new speed milestone is unlocked
+        drawSpeedAlerts() {
+          if (this.speedUpFlashTimer <= 0) return;
+          const ctx = this.ctx;
+          ctx.save();
+          
+          const alpha = clamp(this.speedUpFlashTimer > 1.5 ? (2.0 - this.speedUpFlashTimer) * 2 : this.speedUpFlashTimer / 1.5, 0, 1);
+          ctx.globalAlpha = alpha;
+          
+          ctx.fillStyle = "#ffd166";
+          ctx.font = `black ${Math.floor(28 * this.scale)}px Inter, system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.shadowColor = "rgba(0, 0, 0, 0.4)";
+          ctx.shadowBlur = 12 * this.scale;
+          
+          ctx.fillText(`SPEED UP: x${this.lastSpeedTier.toFixed(1)}! ⚡`, this.width * 0.5, this.height * 0.28);
+          ctx.restore();
+        }
+
+        drawVignette() {
+          const ctx = this.ctx;
+          const gradient = ctx.createRadialGradient(
+            this.width * 0.5,
+            this.height * 0.5,
+            Math.min(this.width, this.height) * 0.25,
+            this.width * 0.5,
+            this.height * 0.5,
+            Math.max(this.width, this.height) * 0.75
+          );
+          gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+          gradient.addColorStop(1, "rgba(6, 7, 20, 0.32)");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, this.width, this.height);
+        }
+      }
+
+      const ui = {
+        scoreText: document.getElementById("scoreText"),
+        bestText: document.getElementById("bestText"),
+        finalScoreText: document.getElementById("finalScoreText"),
+        finalBestText: document.getElementById("finalBestText"),
+        gameOverReason: document.getElementById("gameOverReason"),
+        startScreen: document.getElementById("startScreen"),
+        pauseScreen: document.getElementById("pauseScreen"),
+        gameOverScreen: document.getElementById("gameOverScreen"),
+        startButton: document.getElementById("startButton"),
+        restartButton: document.getElementById("restartButton"),
+        resumeButton: document.getElementById("resumeButton"),
+        pauseButton: document.getElementById("pauseButton"),
+        restartFromPauseButton: document.getElementById("restartFromPauseButton")
+      };
+
+      const soundButton = document.getElementById("soundButton");
+      const audio = new AudioKit(soundButton);
+      const canvas = document.getElementById("gameCanvas");
+      new TinyPlanetRunner(canvas, ui, audio);
+    })();
+  </script>
+</body>
+</html>
