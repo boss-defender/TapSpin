@@ -49,4 +49,4 @@ The underlying code (`TinyPlanetRunner.html`) showcases efficient browser develo
 
 ## 📦 Quick Local Setup
 
-No compilation or build steps are necessary! To run this project, just download the file and double click it to play . 
+No compilation or build steps are necessary! To run this project, just download the file and double click it to play through any browser. 
