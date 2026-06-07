@@ -49,4 +49,4 @@ The underlying code (`TinyPlanetRunner.html`) showcases efficient browser develo
 
 ## 📦 Quick Local Setup
 
-Since this game is built entirely in a self-contained document file, setting it up locally takes seconds:
+Since this game is built entirely in a self-contained document file, just download the file and double click it to play . 
